@@ -140,6 +140,23 @@ rf_model.fit(x_train,y_train)
 y_pred_rf=rf_model.predict(x_test)          
 rf_mae = mean_absolute_error(y_test, y_pred_rf)
 
+# ----------------------------
+# Save Feature Importance
+# ----------------------------
+
+feature_importance = pd.DataFrame({
+    "Feature": x_train.columns,
+    "Importance": rf_model.feature_importances_
+})
+
+feature_importance = feature_importance.sort_values(
+    by="Importance",
+    ascending=False
+)
+
+joblib.dump(feature_importance, "model/feature_importance.pkl")
+
+print("✅ Feature Importance Saved Successfully!")
 
 #Evaluate the Random Forest model
 rf_rmse = np.sqrt(mean_squared_error(y_test, y_pred_rf))

@@ -2,10 +2,12 @@ import streamlit as st
 import joblib
 import pandas as pd
 from PIL import Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
 
-# ----------------------------
+# ----------------------------------------
 # Indian Currency Format
-# ----------------------------
+# ----------------------------------------
 def format_indian_currency(num):
     num = int(num)
     s = str(num)
@@ -28,23 +30,28 @@ def format_indian_currency(num):
     return ",".join(parts) + "," + last3
 
 
-# ----------------------------
+# ----------------------------------------
 # Load Model
-# ----------------------------
+# ----------------------------------------
+
 model = joblib.load("model/best_model.pkl")
 label_encoders = joblib.load("model/label_encoders.pkl")
 
 
-# ----------------------------
+# ----------------------------------------
 # Page Configuration
-# ----------------------------
+# ----------------------------------------
+
 st.set_page_config(
     page_title="Prediction",
     page_icon="🏠",
     layout="wide"
 )
 
+# ----------------------------------------
 # Image Styling
+# ----------------------------------------
+
 st.markdown("""
 <style>
 [data-testid="stImage"] img{
@@ -55,15 +62,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------------------
+# ----------------------------------------
 # Title
-# ----------------------------
+# ----------------------------------------
+
 st.title("🏠 House Price Prediction")
 st.subheader("Enter House Details")
 
-# ----------------------------
+# ----------------------------------------
 # Input Fields
-# ----------------------------
+# ----------------------------------------
 
 left, right = st.columns(2)
 
@@ -88,13 +96,14 @@ with right:
 
 st.divider()
 
-# ----------------------------
+# ----------------------------------------
 # Prediction Button
-# ----------------------------
+# ----------------------------------------
 
 if st.button("🏠 Predict House Price", use_container_width=True):
 
     input_data = pd.DataFrame({
+
         "area":[area],
         "bedrooms":[bedrooms],
         "bathrooms":[bathrooms],
@@ -107,6 +116,7 @@ if st.button("🏠 Predict House Price", use_container_width=True):
         "parking":[parking],
         "prefarea":[prefarea],
         "furnishingstatus":[furnishingstatus]
+
     })
 
     categorical_cols = [
@@ -122,12 +132,52 @@ if st.button("🏠 Predict House Price", use_container_width=True):
     for col in categorical_cols:
         input_data[col] = label_encoders[col].transform(input_data[col])
 
+    # Prediction
+
     prediction = model.predict(input_data)
     formatted_price = format_indian_currency(prediction[0])
 
-    # ----------------------------
+    # ----------------------------------------
+    # Create PDF Report
+    # ----------------------------------------
+
+    pdf_file = "House_Price_Report.pdf"
+
+    doc = SimpleDocTemplate(pdf_file)
+    styles = getSampleStyleSheet()
+
+    story = []
+
+    story.append(
+        Paragraph("<b>House Price Prediction Report</b>", styles["Title"])
+    )
+
+    story.append(Paragraph(f"Area : {area} sq.ft", styles["BodyText"]))
+    story.append(Paragraph(f"Bedrooms : {bedrooms}", styles["BodyText"]))
+    story.append(Paragraph(f"Bathrooms : {bathrooms}", styles["BodyText"]))
+    story.append(Paragraph(f"Stories : {stories}", styles["BodyText"]))
+    story.append(Paragraph(f"Parking : {parking}", styles["BodyText"]))
+    story.append(Paragraph(f"Main Road : {mainroad}", styles["BodyText"]))
+    story.append(Paragraph(f"Guest Room : {guestroom}", styles["BodyText"]))
+    story.append(Paragraph(f"Basement : {basement}", styles["BodyText"]))
+    story.append(Paragraph(f"Hot Water Heating : {hotwaterheating}", styles["BodyText"]))
+    story.append(Paragraph(f"Air Conditioning : {airconditioning}", styles["BodyText"]))
+    story.append(Paragraph(f"Preferred Area : {prefarea}", styles["BodyText"]))
+    story.append(Paragraph(f"Furnishing Status : {furnishingstatus}", styles["BodyText"]))
+    story.append(Paragraph("<br/>", styles["BodyText"]))
+
+    story.append(
+        Paragraph(
+            f"<b>Predicted House Price : ₹ {formatted_price}</b>",
+            styles["Heading2"]
+        )
+    )
+
+    doc.build(story)
+
+    # ----------------------------------------
     # Result Layout
-    # ----------------------------
+    # ----------------------------------------
 
     result_col1, result_col2 = st.columns(2)
 
@@ -162,5 +212,17 @@ if st.button("🏠 Predict House Price", use_container_width=True):
 
         st.image(
             image,
-            use_container_width=True,
+            use_container_width=True
+        )
+
+    st.divider()
+
+    with open(pdf_file, "rb") as file:
+
+        st.download_button(
+            label="📄 Download Prediction Report",
+            data=file,
+            file_name="House_Price_Report.pdf",
+            mime="application/pdf",
+            use_container_width=True
         )
